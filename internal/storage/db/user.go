@@ -16,7 +16,7 @@ func (d *dbStorage) GetUserByLogin(ctx context.Context, login string) (user mode
 func (d *dbStorage) CreateUser(ctx context.Context, login, password string) error {
 	_, err := d.db.ExecContext(
 		ctx,
-		"INSERT INTO users (login, password, balance) VALUES($1, $2) ON CONFLICT (login) DO NOTHING",
+		"INSERT INTO users (login, password, balance) VALUES($1, $2, $3) ON CONFLICT (login) DO NOTHING",
 		login, password, 0,
 	)
 

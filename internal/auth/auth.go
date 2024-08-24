@@ -5,6 +5,7 @@ import (
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/logger"
 	"github.com/golang-jwt/jwt/v4"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -33,15 +34,24 @@ func BuildJWTString(userId string) (string, error) {
 	return tokenString, nil
 }
 
-func GetUserIDFromRequest(request *http.Request) string {
+func GetUserIDFromRequest(request *http.Request) (string, bool) {
 	tokenString := request.Header.Get("Authorization")
+	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 	claims := &Claims{}
 
-	jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
+	_, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
 		return []byte(SECRET_KEY), nil
 	})
 
-	return claims.UserID
+	if err != nil {
+		logger.Log.Error("Error while parse token: ", err)
+		return "", false
+	}
+
+	return claims.UserID, true
+	//userID, ok := request.Context().Value("userID").(string)
+	//
+	//return userID, ok
 }
 
 func verifyToken(tokenString string) error {
@@ -50,9 +60,8 @@ func verifyToken(tokenString string) error {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 
-		return SECRET_KEY, nil
+		return []byte(SECRET_KEY), nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -68,6 +77,19 @@ func verifyToken(tokenString string) error {
 // не надо ли userId возвращать из мидлвары?
 func Auth(handler http.HandlerFunc) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
+		//userID, password, ok := request.BasicAuth()
+		//
+		//if ok {
+		//	// надо проверить что пара username/password верная
+		//	// для этого надо в базу лезть?
+		//	ctx := context.WithValue(request.Context(), "userID", userID)
+		//	handler.ServeHTTP(writer, request.WithContext(ctx))
+		//	return
+		//}
+		//
+		//writer.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+		//writer.WriteHeader(http.StatusUnauthorized)
+
 		tokenString := request.Header.Get("Authorization")
 		if tokenString == "" {
 			logger.Log.Error("No token")
@@ -75,12 +97,14 @@ func Auth(handler http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 		err := verifyToken(tokenString)
 		if err != nil {
 			logger.Log.Error("Invalid token: ", err)
 			writer.WriteHeader(http.StatusUnauthorized)
 			return
 		}
+
 		handler.ServeHTTP(writer, request)
 	}
 }

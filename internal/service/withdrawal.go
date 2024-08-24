@@ -26,7 +26,7 @@ func (s *service) CreateWithdrawal(ctx context.Context, orderNumber string, sum 
 		return err
 	}
 
-	_, err = s.storage.AddWithdrawal(ctx, models.Withdrawals{Order: orderNumber, UserId: userId, Sum: sum, ProcessedAt: time.Now().Format(time.RFC3339)})
+	_, err = s.storage.AddWithdrawal(ctx, models.Withdrawals{ID: orderNumber, UserId: userId, Sum: sum, ProcessedAt: time.Now().Format(time.RFC3339)})
 
 	if err != nil {
 		logger.Log.Error("Error while add withdrawal: ", err)

@@ -86,9 +86,15 @@ func (a *api) Login(writer http.ResponseWriter, request *http.Request) {
 }
 
 func (a *api) GetBalance(writer http.ResponseWriter, request *http.Request) {
-	userId := auth.GetUserIDFromRequest(request)
+	userID, ok := auth.GetUserIDFromRequest(request)
 
-	balance, err := a.s.GetBalance(request.Context(), userId)
+	if !ok {
+		logger.Log.Error("Error while get userID from request")
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	balance, err := a.s.GetBalance(request.Context(), userID)
 
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)

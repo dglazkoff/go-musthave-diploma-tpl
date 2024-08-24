@@ -3,10 +3,14 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/logger"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/models"
+	"github.com/go-resty/resty/v2"
+	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -15,6 +19,23 @@ var ErrorOrderAlreadyAddedByAnotherUser = fmt.Errorf("order already added by ano
 var ErrorNoOrders = fmt.Errorf("no orders")
 
 // var ErrorWrongOrderNumber = fmt.Errorf("wrong order number")
+
+var client = resty.New()
+
+type AccrualOrderStatus string
+
+const (
+	Registered AccrualOrderStatus = "REGISTERED"
+	Processing                    = "PROCESSING"
+	Invalid                       = "INVALID"
+	Processed                     = "PROCESSED"
+)
+
+type AccrualSystemResponse struct {
+	Order   string             `json:"order"`
+	Status  AccrualOrderStatus `json:"status"`
+	Accrual uint               `json:"accrual"`
+}
 
 func (s *service) AddOrder(ctx context.Context, orderNumber string, userLogin string) error {
 	// транзакцию тоже на случай если ордер добавят пока мы делаем проверки ??
@@ -33,13 +54,74 @@ func (s *service) AddOrder(ctx context.Context, orderNumber string, userLogin st
 		return err
 	}
 
-	// запускать сразу горутину которая опрашивает или через какую то общую очередь задач?
-	_, err = s.storage.CreateOrder(ctx, models.Order{ID: orderNumber, UserID: userLogin, Status: models.New, Accrual: 0, UploadedAt: time.Now().Format(time.RFC3339)})
+	order, err = s.storage.CreateOrder(ctx, models.Order{ID: orderNumber, UserID: userLogin, Status: models.New, Accrual: 0, UploadedAt: time.Now().Format(time.RFC3339)})
 
 	if err != nil {
 		logger.Log.Error("Error while create order: ", err)
 		return err
 	}
+
+	go func() {
+		for {
+			response, err := client.R().Get(s.cfg.AccrualSystemAddress + "/api/orders/" + orderNumber)
+
+			fmt.Println(response.StatusCode())
+
+			if err != nil {
+				logger.Log.Error("Error while get order status: ", err)
+				continue
+			}
+
+			if response.StatusCode() == 200 {
+				accrualResponse := AccrualSystemResponse{}
+				if err := json.Unmarshal(response.Body(), &accrualResponse); err != nil {
+					logger.Log.Debug("Error while decode accrual response: ", err)
+					// return err
+				}
+
+				if accrualResponse.Status == Invalid {
+					_, err := s.storage.UpdateOrder(
+						ctx,
+						models.Order{ID: order.ID, UserID: order.UserID, UploadedAt: order.UploadedAt, Status: models.Invalid, Accrual: order.Accrual},
+					)
+
+					if err != nil {
+						logger.Log.Error("Error while update order: ", err)
+					}
+					return
+				}
+
+				if accrualResponse.Status == Processed {
+					_, err := s.storage.UpdateOrder(
+						ctx,
+						models.Order{ID: order.ID, UserID: order.UserID, UploadedAt: order.UploadedAt, Status: models.Processed, Accrual: order.Accrual},
+					)
+
+					if err != nil {
+						logger.Log.Error("Error while update order: ", err)
+					}
+					return
+				}
+			}
+
+			if response.StatusCode() == http.StatusNoContent {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			if response.StatusCode() == http.StatusTooManyRequests {
+				timeToRetry, err := strconv.Atoi(response.Header().Get("Retry-After"))
+
+				if err != nil {
+					logger.Log.Error("Error while parse Retry-After header: ", err)
+					continue
+				}
+
+				time.Sleep(time.Duration(timeToRetry) * time.Second)
+			}
+		}
+
+	}()
 
 	return nil
 }

@@ -15,9 +15,14 @@ type CreateWithdrawalRequest struct {
 }
 
 func (a *api) GetWithdrawals(writer http.ResponseWriter, request *http.Request) {
-	userId := auth.GetUserIDFromRequest(request)
+	userID, ok := auth.GetUserIDFromRequest(request)
+	if !ok {
+		logger.Log.Error("Error while get userID from request")
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-	withdrawals, err := a.s.GetWithdrawals(request.Context(), userId)
+	withdrawals, err := a.s.GetWithdrawals(request.Context(), userID)
 
 	if err != nil {
 		if errors.Is(err, service.ErrorNoOrders) {
@@ -42,7 +47,12 @@ func (a *api) GetWithdrawals(writer http.ResponseWriter, request *http.Request) 
 }
 
 func (a *api) CreateWithdrawal(writer http.ResponseWriter, request *http.Request) {
-	userId := auth.GetUserIDFromRequest(request)
+	userID, ok := auth.GetUserIDFromRequest(request)
+	if !ok {
+		logger.Log.Error("Error while get userID from request")
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	var withdrawalRequest CreateWithdrawalRequest
 
@@ -60,7 +70,7 @@ func (a *api) CreateWithdrawal(writer http.ResponseWriter, request *http.Request
 
 	}
 
-	err = a.s.CreateWithdrawal(request.Context(), withdrawalRequest.Order, withdrawalRequest.Sum, userId)
+	err = a.s.CreateWithdrawal(request.Context(), withdrawalRequest.Order, withdrawalRequest.Sum, userID)
 
 	if err != nil {
 		if errors.Is(err, service.ErrorNotEnoughBalance) {

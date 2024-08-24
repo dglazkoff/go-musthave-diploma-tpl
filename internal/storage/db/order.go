@@ -51,3 +51,18 @@ func (d *dbStorage) GetOrders(ctx context.Context, userId string) ([]models.Orde
 
 	return orders, nil
 }
+
+func (d *dbStorage) UpdateOrder(ctx context.Context, order models.Order) (models.Order, error) {
+	_, err := d.db.ExecContext(
+		ctx,
+		"INSERT INTO orders (id, user_id, status, uploaded_at, accrual) VALUES($1, $2, $3, $4, $5) ON CONFLICT (id) DO SET status = $3, accrual = $5",
+		order.ID, order.UserID, order.Status, order.UploadedAt, order.Accrual,
+	)
+
+	if err != nil {
+		logger.Log.Debug("error while updating order ", err)
+		return order, err
+	}
+
+	return order, nil
+}

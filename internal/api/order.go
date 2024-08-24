@@ -15,6 +15,8 @@ import (
 func isValidOrderNumber(orderNumber string) bool {
 	sum := 0
 	orderNumberSlice := strings.Split(orderNumber, "")
+	parity := len(orderNumberSlice) % 2
+
 	for i := 0; i < len(orderNumberSlice); i++ {
 		number, err := strconv.Atoi(orderNumberSlice[i])
 
@@ -23,7 +25,7 @@ func isValidOrderNumber(orderNumber string) bool {
 			return false
 		}
 
-		if i%2 == 0 {
+		if i%2 == parity {
 			if number*2 > 9 {
 				sum += number*2 - 9
 			} else {
@@ -54,7 +56,14 @@ func (a *api) AddOrder(writer http.ResponseWriter, request *http.Request) {
 
 	}
 
-	err = a.s.AddOrder(request.Context(), string(orderNumber), auth.GetUserIDFromRequest(request))
+	userID, ok := auth.GetUserIDFromRequest(request)
+	if !ok {
+		logger.Log.Error("Error while get userID from request")
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = a.s.AddOrder(request.Context(), string(orderNumber), userID)
 
 	if err != nil {
 		if errors.Is(err, service.ErrorOrderAlreadyAdded) {
@@ -75,9 +84,15 @@ func (a *api) AddOrder(writer http.ResponseWriter, request *http.Request) {
 }
 
 func (a *api) GetOrders(writer http.ResponseWriter, request *http.Request) {
-	userId := auth.GetUserIDFromRequest(request)
+	userID, ok := auth.GetUserIDFromRequest(request)
 
-	orders, err := a.s.GetOrders(request.Context(), userId)
+	if !ok {
+		logger.Log.Error("Error while get userID from request")
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	orders, err := a.s.GetOrders(request.Context(), userID)
 
 	if err != nil {
 		if errors.Is(err, service.ErrorNoOrders) {

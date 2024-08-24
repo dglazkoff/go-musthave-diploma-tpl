@@ -39,10 +39,10 @@ func (s *dbStorage) Bootstrap() error {
 	}
 
 	_, err = s.db.Exec("CREATE TABLE IF NOT EXISTS withdrawals (" +
-		"order VARCHAR(250) PRIMARY KEY, " +
+		"id VARCHAR(250) PRIMARY KEY, " +
 		"user_id VARCHAR(250) NOT NULL, " +
-		"sum INT NOT NULL, " +
-		"processed_at VARCHAR(250) NOT NULL" +
+		"processed_at VARCHAR(250) NOT NULL, " +
+		"sum INT NOT NULL" +
 		")")
 
 	if err != nil {
