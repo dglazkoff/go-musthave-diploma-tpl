@@ -34,7 +34,7 @@ const (
 type AccrualSystemResponse struct {
 	Order   string             `json:"order"`
 	Status  AccrualOrderStatus `json:"status"`
-	Accrual uint               `json:"accrual"`
+	Accrual float64            `json:"accrual"`
 }
 
 func (s *service) AddOrder(ctx context.Context, orderNumber string, userLogin string) error {

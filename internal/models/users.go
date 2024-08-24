@@ -10,7 +10,7 @@ response := map[string]any{
 }
 */
 type User struct {
-	Login    string `json:"login"`
-	Password string `json:"-"`
-	Balance  uint   `json:"balance"`
+	Login    string  `json:"login"`
+	Password string  `json:"-"`
+	Balance  float64 `json:"balance"`
 }

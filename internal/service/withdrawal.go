@@ -18,8 +18,8 @@ func (s *service) GetWithdrawals(ctx context.Context, userId string) ([]models.W
 	return withdrawals, nil
 }
 
-func (s *service) CreateWithdrawal(ctx context.Context, orderNumber string, sum uint, userId string) error {
-	err := s.UpdateBalance(ctx, int(-sum), userId)
+func (s *service) CreateWithdrawal(ctx context.Context, orderNumber string, sum float64, userId string) error {
+	err := s.UpdateBalance(ctx, -sum, userId)
 
 	if err != nil {
 		logger.Log.Error("Error while update balance: ", err)

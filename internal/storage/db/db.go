@@ -17,7 +17,7 @@ func (s *dbStorage) Bootstrap() error {
 	_, err := s.db.Exec("CREATE TABLE IF NOT EXISTS users (" +
 		"login VARCHAR(250) PRIMARY KEY, " +
 		"password VARCHAR(250) NOT NULL," +
-		"balance INT NOT NULL" +
+		"balance DOUBLE PRECISION NOT NULL" +
 		")")
 
 	if err != nil {
@@ -30,7 +30,7 @@ func (s *dbStorage) Bootstrap() error {
 		"user_id VARCHAR(250) NOT NULL, " +
 		"status VARCHAR(250) NOT NULL, " +
 		"uploaded_at VARCHAR(250) NOT NULL, " +
-		"accrual INT NOT NULL" +
+		"accrual DOUBLE PRECISION NOT NULL" +
 		")")
 
 	if err != nil {
@@ -42,7 +42,7 @@ func (s *dbStorage) Bootstrap() error {
 		"id VARCHAR(250) PRIMARY KEY, " +
 		"user_id VARCHAR(250) NOT NULL, " +
 		"processed_at VARCHAR(250) NOT NULL, " +
-		"sum INT NOT NULL" +
+		"sum DOUBLE PRECISION NOT NULL" +
 		")")
 
 	if err != nil {

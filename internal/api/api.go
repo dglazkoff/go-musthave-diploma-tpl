@@ -15,7 +15,7 @@ type apiService interface {
 	AddOrder(ctx context.Context, orderNumber string, userLogin string) error
 
 	GetWithdrawals(ctx context.Context, userId string) ([]models.Withdrawals, error)
-	CreateWithdrawal(ctx context.Context, orderNumber string, sum uint, userId string) error
+	CreateWithdrawal(ctx context.Context, orderNumber string, sum float64, userId string) error
 }
 
 type api struct {

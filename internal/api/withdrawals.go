@@ -10,8 +10,8 @@ import (
 )
 
 type CreateWithdrawalRequest struct {
-	Order string `json:"order"`
-	Sum   uint   `json:"sum"`
+	Order string  `json:"order"`
+	Sum   float64 `json:"sum"`
 }
 
 func (a *api) GetWithdrawals(writer http.ResponseWriter, request *http.Request) {

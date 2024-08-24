@@ -15,8 +15,8 @@ type UserRequest struct {
 }
 
 type BalanceResponse struct {
-	Current   uint `json:"current"`
-	Withdrawn uint `json:"withdrawn"`
+	Current   float64 `json:"current"`
+	Withdrawn float64 `json:"withdrawn"`
 }
 
 func (a *api) Register(writer http.ResponseWriter, request *http.Request) {

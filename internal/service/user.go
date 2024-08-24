@@ -16,8 +16,8 @@ var ErrorWrongCredentials = fmt.Errorf("wrong pair login/password")
 var ErrorNotEnoughBalance = fmt.Errorf("not enough balance")
 
 type UserBalance struct {
-	Current   uint
-	Withdrawn uint
+	Current   float64
+	Withdrawn float64
 }
 
 func getHashPassword(password string) string {
@@ -81,7 +81,7 @@ func (s *service) GetBalance(ctx context.Context, userId string) (UserBalance, e
 		return UserBalance{}, err
 	}
 
-	var sum uint
+	var sum float64
 
 	for _, w := range withdrawals {
 		sum += w.Sum
@@ -93,7 +93,7 @@ func (s *service) GetBalance(ctx context.Context, userId string) (UserBalance, e
 	}, nil
 }
 
-func (s *service) UpdateBalance(ctx context.Context, sum int, userId string) error {
+func (s *service) UpdateBalance(ctx context.Context, sum float64, userId string) error {
 	user, err := s.storage.GetUserByLogin(ctx, userId)
 	copyUser := user
 
@@ -102,11 +102,11 @@ func (s *service) UpdateBalance(ctx context.Context, sum int, userId string) err
 		return err
 	}
 
-	if sum < 0 && int(copyUser.Balance) < int(math.Abs(float64(sum))) {
+	if sum < 0 && copyUser.Balance < math.Abs(sum) {
 		return ErrorNotEnoughBalance
 	}
 
-	copyUser.Balance += uint(sum)
+	copyUser.Balance += sum
 
 	_, err = s.storage.UpdateUser(ctx, copyUser)
 
