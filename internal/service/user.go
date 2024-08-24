@@ -94,6 +94,7 @@ func (s *service) GetBalance(ctx context.Context, userId string) (UserBalance, e
 }
 
 func (s *service) UpdateBalance(ctx context.Context, sum float64, userId string) error {
+	logger.Log.Debug("Update balance: ", sum)
 	user, err := s.storage.GetUserByLogin(ctx, userId)
 	copyUser := user
 
@@ -103,11 +104,12 @@ func (s *service) UpdateBalance(ctx context.Context, sum float64, userId string)
 	}
 
 	if sum < 0 && copyUser.Balance < math.Abs(sum) {
+		logger.Log.Error("Not enough balance")
 		return ErrorNotEnoughBalance
 	}
 
 	copyUser.Balance += sum
-
+	fmt.Println(copyUser)
 	_, err = s.storage.UpdateUser(ctx, copyUser)
 
 	if err != nil {

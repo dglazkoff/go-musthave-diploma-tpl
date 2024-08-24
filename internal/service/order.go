@@ -81,25 +81,39 @@ func (s *service) AddOrder(ctx context.Context, orderNumber string, userLogin st
 
 				if accrualResponse.Status == Invalid {
 					_, err := s.storage.UpdateOrder(
-						ctx,
-						models.Order{ID: order.ID, UserID: order.UserID, UploadedAt: order.UploadedAt, Status: models.Invalid, Accrual: order.Accrual},
+						context.Background(),
+						models.Order{ID: order.ID, UserID: order.UserID, UploadedAt: order.UploadedAt, Status: models.Invalid, Accrual: accrualResponse.Accrual},
 					)
 
 					if err != nil {
 						logger.Log.Error("Error while update order: ", err)
 					}
+
+					err = s.UpdateBalance(context.Background(), accrualResponse.Accrual, userLogin)
+
+					if err != nil {
+						logger.Log.Error("Error while update balance: ", err)
+					}
+
 					return
 				}
 
 				if accrualResponse.Status == Processed {
 					_, err := s.storage.UpdateOrder(
-						ctx,
-						models.Order{ID: order.ID, UserID: order.UserID, UploadedAt: order.UploadedAt, Status: models.Processed, Accrual: order.Accrual},
+						context.Background(),
+						models.Order{ID: order.ID, UserID: order.UserID, UploadedAt: order.UploadedAt, Status: models.Processed, Accrual: accrualResponse.Accrual},
 					)
 
 					if err != nil {
 						logger.Log.Error("Error while update order: ", err)
 					}
+
+					err = s.UpdateBalance(context.Background(), accrualResponse.Accrual, userLogin)
+
+					if err != nil {
+						logger.Log.Error("Error while update balance: ", err)
+					}
+
 					return
 				}
 			}

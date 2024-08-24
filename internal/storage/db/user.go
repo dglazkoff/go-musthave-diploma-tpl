@@ -31,7 +31,7 @@ func (d *dbStorage) CreateUser(ctx context.Context, login, password string) erro
 func (d *dbStorage) UpdateUser(ctx context.Context, user models.User) (models.User, error) {
 	_, err := d.db.ExecContext(
 		ctx,
-		"UPDATE users SET login = $1, password = $2, balance = $3 WHERE login = $3 ON CONFLICT (login) DO UPDATE SET balance = $3",
+		"INSERT INTO users (login, password, balance) VALUES($1, $2, $3) ON CONFLICT (login) DO UPDATE SET balance = $3",
 		user.Login, user.Password, user.Balance,
 	)
 

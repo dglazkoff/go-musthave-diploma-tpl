@@ -19,6 +19,7 @@ func (s *service) GetWithdrawals(ctx context.Context, userId string) ([]models.W
 }
 
 func (s *service) CreateWithdrawal(ctx context.Context, orderNumber string, sum float64, userId string) error {
+	logger.Log.Debug("Create withdrawal: ", sum)
 	err := s.UpdateBalance(ctx, -sum, userId)
 
 	if err != nil {
