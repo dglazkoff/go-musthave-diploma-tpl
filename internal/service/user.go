@@ -109,7 +109,6 @@ func (s *service) UpdateBalance(ctx context.Context, sum float64, userId string)
 	}
 
 	copyUser.Balance += sum
-	fmt.Println(copyUser)
 	_, err = s.storage.UpdateUser(ctx, copyUser)
 
 	if err != nil {

@@ -17,7 +17,6 @@ type Claims struct {
 const TOKEN_EXP = time.Hour * 3
 const SECRET_KEY = "supersecretkey"
 
-// BuildJWTString создаёт токен и возвращает его в виде строки.
 func BuildJWTString(userId string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -49,9 +48,6 @@ func GetUserIDFromRequest(request *http.Request) (string, bool) {
 	}
 
 	return claims.UserID, true
-	//userID, ok := request.Context().Value("userID").(string)
-	//
-	//return userID, ok
 }
 
 func verifyToken(tokenString string) error {
@@ -74,22 +70,8 @@ func verifyToken(tokenString string) error {
 	return nil
 }
 
-// не надо ли userId возвращать из мидлвары?
 func Auth(handler http.HandlerFunc) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		//userID, password, ok := request.BasicAuth()
-		//
-		//if ok {
-		//	// надо проверить что пара username/password верная
-		//	// для этого надо в базу лезть?
-		//	ctx := context.WithValue(request.Context(), "userID", userID)
-		//	handler.ServeHTTP(writer, request.WithContext(ctx))
-		//	return
-		//}
-		//
-		//writer.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
-		//writer.WriteHeader(http.StatusUnauthorized)
-
 		tokenString := request.Header.Get("Authorization")
 		if tokenString == "" {
 			logger.Log.Error("No token")

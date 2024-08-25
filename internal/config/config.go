@@ -11,7 +11,6 @@ type Config struct {
 	DatabaseURI          string
 }
 
-// "host=localhost user=postgres password=12345678 dbname=gophermart sslmode=disable"
 func ParseConfig() Config {
 	cfg := Config{}
 

@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/logger"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/models"
 )
@@ -12,7 +11,7 @@ func (d *dbStorage) GetWithdrawals(ctx context.Context, userId string) ([]models
 	var withdrawals []models.Withdrawals
 
 	if err != nil {
-		logger.Log.Debug("error while reading withdrawals: ", err)
+		logger.Log.Error("error while reading withdrawals: ", err)
 		return nil, err
 	}
 
@@ -21,7 +20,7 @@ func (d *dbStorage) GetWithdrawals(ctx context.Context, userId string) ([]models
 		err = rows.Scan(&withdrawal.ID, &withdrawal.Sum, &withdrawal.UserId, &withdrawal.ProcessedAt)
 
 		if err != nil {
-			logger.Log.Debug("error while scan withdrawal: ", err)
+			logger.Log.Error("error while scan withdrawal: ", err)
 			continue
 		}
 
@@ -32,7 +31,6 @@ func (d *dbStorage) GetWithdrawals(ctx context.Context, userId string) ([]models
 }
 
 func (d *dbStorage) AddWithdrawal(ctx context.Context, withdrawal models.Withdrawals) (models.Withdrawals, error) {
-	fmt.Println(withdrawal)
 	_, err := d.db.ExecContext(ctx, "INSERT INTO withdrawals (id, sum, user_id, processed_at) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING", withdrawal.ID, withdrawal.Sum, withdrawal.UserId, withdrawal.ProcessedAt)
 
 	if err != nil {

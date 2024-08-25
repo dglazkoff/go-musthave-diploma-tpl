@@ -39,9 +39,6 @@ func isValidOrderNumber(orderNumber string) bool {
 	return sum%10 == 0
 }
 
-// мидлвару надо на проверку авторизации - а как проверить что это не какойто левый токен?
-
-// где валидировать? в хендлере или в сервисе?
 func (a *api) AddOrder(writer http.ResponseWriter, request *http.Request) {
 	orderNumber, err := io.ReadAll(request.Body)
 
