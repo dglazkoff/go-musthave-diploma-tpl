@@ -1,6 +1,6 @@
 module github.com/dglazkoff/go-musthave-diploma-tpl
 
-go 1.23.0
+go 1.22.2
 
 require (
 	github.com/go-chi/chi/v5 v5.1.0
