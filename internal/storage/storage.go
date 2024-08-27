@@ -11,11 +11,11 @@ type Gophermart interface {
 	GetUserByLogin(ctx context.Context, login string) (models.User, error)
 	UpdateUser(ctx context.Context, user models.User) (models.User, error)
 
-	GetOrders(ctx context.Context, userId string) ([]models.Order, error)
-	GetOrder(ctx context.Context, orderId string) (models.Order, error)
+	GetOrders(ctx context.Context, userID string) ([]models.Order, error)
+	GetOrder(ctx context.Context, orderID string) (models.Order, error)
 	CreateOrder(ctx context.Context, order models.Order) (models.Order, error)
 	UpdateOrder(ctx context.Context, order models.Order) (models.Order, error)
 
-	GetWithdrawals(ctx context.Context, userId string) ([]models.Withdrawals, error)
+	GetWithdrawals(ctx context.Context, userID string) ([]models.Withdrawals, error)
 	AddWithdrawal(ctx context.Context, withdrawal models.Withdrawals) (models.Withdrawals, error)
 }

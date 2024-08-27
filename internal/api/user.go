@@ -108,5 +108,12 @@ func (a *api) GetBalance(writer http.ResponseWriter, request *http.Request) {
 
 	writer.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(writer).Encode(balanceResponse)
+
+	if err != nil {
+		logger.Log.Error("Error while encode balance response: ", err)
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	writer.WriteHeader(http.StatusOK)
 }

@@ -6,8 +6,8 @@ import (
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/models"
 )
 
-func (d *dbStorage) GetWithdrawals(ctx context.Context, userId string) ([]models.Withdrawals, error) {
-	rows, err := d.db.QueryContext(ctx, "SELECT id, sum, user_id, processed_at from withdrawals WHERE user_id = $1", userId)
+func (s *dbStorage) GetWithdrawals(ctx context.Context, userID string) ([]models.Withdrawals, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT id, sum, user_id, processed_at from withdrawals WHERE user_id = $1", userID)
 	var withdrawals []models.Withdrawals
 
 	if err != nil {
@@ -17,7 +17,7 @@ func (d *dbStorage) GetWithdrawals(ctx context.Context, userId string) ([]models
 
 	for rows.Next() {
 		var withdrawal models.Withdrawals
-		err = rows.Scan(&withdrawal.ID, &withdrawal.Sum, &withdrawal.UserId, &withdrawal.ProcessedAt)
+		err = rows.Scan(&withdrawal.ID, &withdrawal.Sum, &withdrawal.UserID, &withdrawal.ProcessedAt)
 
 		if err != nil {
 			logger.Log.Error("error while scan withdrawal: ", err)
@@ -27,11 +27,15 @@ func (d *dbStorage) GetWithdrawals(ctx context.Context, userId string) ([]models
 		withdrawals = append(withdrawals, withdrawal)
 	}
 
+	if rows.Err() != nil {
+		logger.Log.Debug("error from rows ", err)
+	}
+
 	return withdrawals, nil
 }
 
-func (d *dbStorage) AddWithdrawal(ctx context.Context, withdrawal models.Withdrawals) (models.Withdrawals, error) {
-	_, err := d.db.ExecContext(ctx, "INSERT INTO withdrawals (id, sum, user_id, processed_at) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING", withdrawal.ID, withdrawal.Sum, withdrawal.UserId, withdrawal.ProcessedAt)
+func (s *dbStorage) AddWithdrawal(ctx context.Context, withdrawal models.Withdrawals) (models.Withdrawals, error) {
+	_, err := s.db.ExecContext(ctx, "INSERT INTO withdrawals (id, sum, user_id, processed_at) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING", withdrawal.ID, withdrawal.Sum, withdrawal.UserID, withdrawal.ProcessedAt)
 
 	if err != nil {
 		logger.Log.Error("error while add withdrawal: ", err)

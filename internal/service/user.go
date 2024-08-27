@@ -66,15 +66,15 @@ func (s *service) Login(ctx context.Context, login, password string) error {
 	return nil
 }
 
-func (s *service) GetBalance(ctx context.Context, userId string) (UserBalance, error) {
-	user, err := s.storage.GetUserByLogin(ctx, userId)
+func (s *service) GetBalance(ctx context.Context, userID string) (UserBalance, error) {
+	user, err := s.storage.GetUserByLogin(ctx, userID)
 
 	if err != nil {
 		logger.Log.Error("Error while get user by login during get balance: ", err)
 		return UserBalance{}, err
 	}
 
-	withdrawals, err := s.GetWithdrawals(ctx, userId)
+	withdrawals, err := s.GetWithdrawals(ctx, userID)
 
 	if err != nil {
 		logger.Log.Error("Error while get withdrawals during get balance: ", err)
@@ -93,9 +93,9 @@ func (s *service) GetBalance(ctx context.Context, userId string) (UserBalance, e
 	}, nil
 }
 
-func (s *service) UpdateBalance(ctx context.Context, sum float64, userId string) error {
+func (s *service) UpdateBalance(ctx context.Context, sum float64, userID string) error {
 	logger.Log.Debug("Update balance: ", sum)
-	user, err := s.storage.GetUserByLogin(ctx, userId)
+	user, err := s.storage.GetUserByLogin(ctx, userID)
 	copyUser := user
 
 	if err != nil {

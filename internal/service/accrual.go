@@ -15,9 +15,9 @@ type AccrualOrderStatus string
 
 const (
 	Registered AccrualOrderStatus = "REGISTERED"
-	Processing                    = "PROCESSING"
-	Invalid                       = "INVALID"
-	Processed                     = "PROCESSED"
+	Processing AccrualOrderStatus = "PROCESSING"
+	Invalid    AccrualOrderStatus = "INVALID"
+	Processed  AccrualOrderStatus = "PROCESSED"
 )
 
 type AccrualSystemResponse struct {
