@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/logger"
 )
@@ -51,4 +52,8 @@ func (s *dbStorage) Bootstrap() error {
 	}
 
 	return nil
+}
+
+func (s *dbStorage) BeginTx(ctx context.Context, options *sql.TxOptions) (*sql.Tx, error) {
+	return s.db.BeginTx(ctx, options)
 }

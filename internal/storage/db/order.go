@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/logger"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/models"
 )
@@ -56,8 +57,8 @@ func (s *dbStorage) GetOrders(ctx context.Context, userID string) ([]models.Orde
 	return orders, nil
 }
 
-func (s *dbStorage) UpdateOrder(ctx context.Context, order models.Order) (models.Order, error) {
-	_, err := s.db.ExecContext(
+func (s *dbStorage) UpdateOrderTx(ctx context.Context, tx *sql.Tx, order models.Order) (models.Order, error) {
+	_, err := tx.ExecContext(
 		ctx,
 		"INSERT INTO orders (id, user_id, status, uploaded_at, accrual) VALUES($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET status = $3, accrual = $5",
 		order.ID, order.UserID, order.Status, order.UploadedAt, order.Accrual,

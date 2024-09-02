@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/logger"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/models"
 	"net/http"
@@ -26,11 +25,79 @@ type AccrualSystemResponse struct {
 	Accrual float64            `json:"accrual"`
 }
 
+func (s *service) handleSuccessAccrualResponse(accrual *AccrualSystemResponse, order models.Order, userLogin string) error {
+	ctx := context.Background()
+	logger.Log.Debug("Handle accrual response: ", accrual.Accrual)
+	logger.Log.Debug("Handle accrual response with status: ", accrual.Status)
+	logger.Log.Debug("Handle accrual response for Order: ", accrual.Order)
+
+	tx, err := s.storage.BeginTx(ctx, nil)
+
+	if err != nil {
+		logger.Log.Error("Error while begin transaction: ", err)
+		return err
+	}
+
+	defer tx.Rollback()
+
+	if accrual.Status == Invalid {
+		_, err := s.storage.UpdateOrderTx(
+			ctx,
+			tx,
+			models.Order{ID: order.ID, UserID: order.UserID, UploadedAt: order.UploadedAt, Status: models.Invalid, Accrual: accrual.Accrual},
+		)
+
+		if err != nil {
+			logger.Log.Error("Error while update order: ", err)
+			return err
+		}
+
+		err = s.UpdateBalanceTx(context.Background(), tx, accrual.Accrual, userLogin)
+
+		if err != nil {
+			logger.Log.Error("Error while update balance: ", err)
+			return err
+		}
+	}
+
+	if accrual.Status == Processed {
+		/*
+			что будет если после UpdateOrderTx сервис перезапустят для обновления и UpdateBalance вы выпонится?
+			что будет если UpdateOrderTx вернет ошибку, баланс все равно нужно обновить?
+
+			сделал транзакцию на обновление данных
+		*/
+		_, err := s.storage.UpdateOrderTx(
+			context.Background(),
+			tx,
+			models.Order{ID: order.ID, UserID: order.UserID, UploadedAt: order.UploadedAt, Status: models.Processed, Accrual: accrual.Accrual},
+		)
+
+		if err != nil {
+			logger.Log.Error("Error while update order: ", err)
+			return err
+		}
+
+		err = s.UpdateBalanceTx(context.Background(), tx, accrual.Accrual, userLogin)
+
+		if err != nil {
+			logger.Log.Error("Error while update balance: ", err)
+			return err
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		logger.Log.Error("Error while commit transaction: ", err)
+		return err
+	}
+
+	return nil
+}
+
 func (s *service) GetAccrual(order models.Order, userLogin string) {
 	for {
+		logger.Log.Debug("Get accrual for order: ", order.ID)
 		response, err := client.R().Get(s.cfg.AccrualSystemAddress + "/api/orders/" + order.ID)
-
-		fmt.Println(response.StatusCode())
 
 		if err != nil {
 			logger.Log.Error("Error while get order status: ", err)
@@ -44,42 +111,8 @@ func (s *service) GetAccrual(order models.Order, userLogin string) {
 				continue
 			}
 
-			if accrualResponse.Status == Invalid {
-				_, err := s.storage.UpdateOrder(
-					context.Background(),
-					models.Order{ID: order.ID, UserID: order.UserID, UploadedAt: order.UploadedAt, Status: models.Invalid, Accrual: accrualResponse.Accrual},
-				)
-
-				if err != nil {
-					logger.Log.Error("Error while update order: ", err)
-				}
-
-				err = s.UpdateBalance(context.Background(), accrualResponse.Accrual, userLogin)
-
-				if err != nil {
-					logger.Log.Error("Error while update balance: ", err)
-				}
-
-				return
-			}
-
-			if accrualResponse.Status == Processed {
-				_, err := s.storage.UpdateOrder(
-					context.Background(),
-					models.Order{ID: order.ID, UserID: order.UserID, UploadedAt: order.UploadedAt, Status: models.Processed, Accrual: accrualResponse.Accrual},
-				)
-
-				if err != nil {
-					logger.Log.Error("Error while update order: ", err)
-				}
-
-				err = s.UpdateBalance(context.Background(), accrualResponse.Accrual, userLogin)
-
-				if err != nil {
-					logger.Log.Error("Error while update balance: ", err)
-				}
-
-				return
+			if err = s.handleSuccessAccrualResponse(&accrualResponse, order, userLogin); err != nil {
+				continue
 			}
 		}
 
@@ -98,5 +131,7 @@ func (s *service) GetAccrual(order models.Order, userLogin string) {
 
 			time.Sleep(time.Duration(timeToRetry) * time.Second)
 		}
+
+		break
 	}
 }

@@ -28,9 +28,18 @@ func getHashPassword(password string) string {
 }
 
 func (s *service) Register(ctx context.Context, login, password string) error {
-	// нужна ли транзацкция которая возмет юзера и если такого нет то запишет нового ??
-	// может ли за время работы функции другой поток создать юзера с таким же логином?
-	_, err := s.storage.GetUserByLogin(ctx, login)
+	tx, err := s.storage.BeginTx(ctx, nil)
+
+	if err != nil {
+		logger.Log.Error("Error while begin transaction: ", err)
+		return err
+	}
+
+	defer tx.Rollback()
+
+	// получается мы блокируем запись в таблицу на время выполнения регистрации
+	// не уверен, что это хорошо, но не вижу других вариантов, если надо предотвращать регистрацию параллельным потоком
+	_, err = s.storage.GetUserByLoginForUpdate(ctx, tx, login)
 
 	if err == nil {
 		return ErrorLoginExists
@@ -41,10 +50,15 @@ func (s *service) Register(ctx context.Context, login, password string) error {
 		return err
 	}
 
-	err = s.storage.CreateUser(ctx, login, getHashPassword(password))
+	err = s.storage.CreateUser(ctx, tx, login, getHashPassword(password))
 
 	if err != nil {
 		logger.Log.Error("Error while create user: ", err)
+		return err
+	}
+
+	if err = tx.Commit(); err != nil {
+		logger.Log.Error("Error while commit transaction: ", err)
 		return err
 	}
 
@@ -67,14 +81,25 @@ func (s *service) Login(ctx context.Context, login, password string) error {
 }
 
 func (s *service) GetBalance(ctx context.Context, userID string) (UserBalance, error) {
-	user, err := s.storage.GetUserByLogin(ctx, userID)
+	// единственное чем тут транзакция полезна, что может придти withdrawal уже после того, как бы вычитали баланс
+	// а поможет ли нам такой уровень изоляции? ведь это другая таблица и снепшота ее не будет
+	tx, err := s.storage.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
+
+	if err != nil {
+		logger.Log.Error("Error while begin transaction: ", err)
+		return UserBalance{}, err
+	}
+
+	defer tx.Rollback()
+
+	user, err := s.storage.GetUserByLoginTx(ctx, tx, userID)
 
 	if err != nil {
 		logger.Log.Error("Error while get user by login during get balance: ", err)
 		return UserBalance{}, err
 	}
 
-	withdrawals, err := s.GetWithdrawals(ctx, userID)
+	withdrawals, err := s.storage.GetWithdrawalsTx(ctx, tx, userID)
 
 	if err != nil {
 		logger.Log.Error("Error while get withdrawals during get balance: ", err)
@@ -87,33 +112,64 @@ func (s *service) GetBalance(ctx context.Context, userID string) (UserBalance, e
 		sum += w.Sum
 	}
 
+	if err = tx.Commit(); err != nil {
+		logger.Log.Error("Error while commit transaction: ", err)
+		return UserBalance{}, err
+	}
+
 	return UserBalance{
 		Current:   user.Balance,
 		Withdrawn: sum,
 	}, nil
 }
 
-func (s *service) UpdateBalance(ctx context.Context, sum float64, userID string) error {
+func (s *service) UpdateBalanceTx(ctx context.Context, tx *sql.Tx, sum float64, userID string) error {
 	logger.Log.Debug("Update balance: ", sum)
-	user, err := s.storage.GetUserByLogin(ctx, userID)
-	copyUser := user
+	user, err := s.storage.GetUserByLoginForUpdate(ctx, tx, userID)
 
 	if err != nil {
 		logger.Log.Error("Error while get user by login during update balance: ", err)
 		return err
 	}
 
-	if sum < 0 && copyUser.Balance < math.Abs(sum) {
+	if sum < 0 && user.Balance < math.Abs(sum) {
 		logger.Log.Error("Not enough balance")
 		return ErrorNotEnoughBalance
 	}
 
-	copyUser.Balance += sum
-	_, err = s.storage.UpdateUser(ctx, copyUser)
+	user.Balance += sum
+	_, err = s.storage.UpdateUser(ctx, tx, user)
 
 	if err != nil {
 		logger.Log.Error("Error while update user: ", err)
 		return err
+	}
+
+	return nil
+}
+
+func (s *service) UpdateBalance(ctx context.Context, sum float64, userID string) error {
+	/*
+		что произойдет если между GetUserByLoginTx и UpdateUser придет другой запрос и загонит баланс в 0?
+
+		поставил блокировку на чтение в транзакции
+	*/
+	tx, err := s.storage.BeginTx(ctx, nil)
+
+	if err != nil {
+		logger.Log.Error("Error while begin transaction: ", err)
+		return err
+	}
+
+	defer tx.Rollback()
+
+	err = s.UpdateBalanceTx(ctx, tx, sum, userID)
+
+	if err == nil {
+		if err = tx.Commit(); err != nil {
+			logger.Log.Error("Error while commit transaction: ", err)
+			return err
+		}
 	}
 
 	return nil

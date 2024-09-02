@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/logger"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/models"
 )
@@ -13,8 +14,25 @@ func (s *dbStorage) GetUserByLogin(ctx context.Context, login string) (user mode
 	return
 }
 
-func (s *dbStorage) CreateUser(ctx context.Context, login, password string) error {
-	_, err := s.db.ExecContext(
+func (s *dbStorage) GetUserByLoginTx(ctx context.Context, tx *sql.Tx, login string) (user models.User, err error) {
+	row := tx.QueryRowContext(ctx, "SELECT login, password, balance from users WHERE login = $1", login)
+	err = row.Scan(&user.Login, &user.Password, &user.Balance)
+
+	return
+}
+
+// как в таких случаях поступать? дублировать функцию просто чтобы добавить FOR UPDATE?
+// или делать прям в storage слое методы UpdateBalance?
+// или еще как то?
+func (s *dbStorage) GetUserByLoginForUpdate(ctx context.Context, tx *sql.Tx, login string) (user models.User, err error) {
+	row := tx.QueryRowContext(ctx, "SELECT login, password, balance from users WHERE login = $1 FOR UPDATE", login)
+	err = row.Scan(&user.Login, &user.Password, &user.Balance)
+
+	return
+}
+
+func (s *dbStorage) CreateUser(ctx context.Context, tx *sql.Tx, login, password string) error {
+	_, err := tx.ExecContext(
 		ctx,
 		"INSERT INTO users (login, password, balance) VALUES($1, $2, $3) ON CONFLICT (login) DO NOTHING",
 		login, password, 0,
@@ -28,8 +46,8 @@ func (s *dbStorage) CreateUser(ctx context.Context, login, password string) erro
 	return nil
 }
 
-func (s *dbStorage) UpdateUser(ctx context.Context, user models.User) (models.User, error) {
-	_, err := s.db.ExecContext(
+func (s *dbStorage) UpdateUser(ctx context.Context, tx *sql.Tx, user models.User) (models.User, error) {
+	_, err := tx.ExecContext(
 		ctx,
 		"INSERT INTO users (login, password, balance) VALUES($1, $2, $3) ON CONFLICT (login) DO UPDATE SET balance = $3",
 		user.Login, user.Password, user.Balance,

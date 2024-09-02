@@ -23,7 +23,7 @@ func Run(cfg *config.Config) error {
 
 	if err != nil {
 		logger.Log.Debug("Error on bootstrap db ", err)
-		panic(err)
+		return err
 	}
 
 	logger.Log.Infow("Starting Server on ", "addr", cfg.RunAddr)

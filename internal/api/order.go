@@ -45,6 +45,7 @@ func (a *api) AddOrder(writer http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		logger.Log.Error("Error while reading request body: ", err)
 		writer.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	if !isValidOrderNumber(string(orderNumber)) {
