@@ -14,7 +14,8 @@ type Gophermart interface {
 	GetUserByLoginForUpdate(ctx context.Context, tx *sql.Tx, login string) (models.User, error)
 	UpdateUser(ctx context.Context, tx *sql.Tx, user models.User) (models.User, error)
 
-	GetOrders(ctx context.Context, userID string) ([]models.Order, error)
+	GetNotAccrualOrders(ctx context.Context) ([]models.Order, error)
+	GetUserOrders(ctx context.Context, userID string) ([]models.Order, error)
 	GetOrder(ctx context.Context, orderID string) (models.Order, error)
 	CreateOrder(ctx context.Context, order models.Order) (models.Order, error)
 	UpdateOrderTx(ctx context.Context, tx *sql.Tx, order models.Order) (models.Order, error)

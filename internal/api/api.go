@@ -11,7 +11,7 @@ type apiService interface {
 	Login(ctx context.Context, login string, password string) error
 	GetBalance(ctx context.Context, userID string) (service.UserBalance, error)
 
-	GetOrders(ctx context.Context, userID string) ([]models.Order, error)
+	GetUserOrders(ctx context.Context, userID string) ([]models.Order, error)
 	AddOrder(ctx context.Context, orderNumber string, userLogin string) error
 
 	GetWithdrawals(ctx context.Context, userID string) ([]models.Withdrawals, error)

@@ -149,11 +149,6 @@ func (s *service) UpdateBalanceTx(ctx context.Context, tx *sql.Tx, sum float64, 
 }
 
 func (s *service) UpdateBalance(ctx context.Context, sum float64, userID string) error {
-	/*
-		что произойдет если между GetUserByLoginTx и UpdateUser придет другой запрос и загонит баланс в 0?
-
-		поставил блокировку на чтение в транзакции
-	*/
 	tx, err := s.storage.BeginTx(ctx, nil)
 
 	if err != nil {

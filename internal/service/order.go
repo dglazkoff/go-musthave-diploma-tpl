@@ -54,8 +54,8 @@ func (s *service) AddOrder(ctx context.Context, orderNumber string, userLogin st
 	return nil
 }
 
-func (s *service) GetOrders(ctx context.Context, userID string) ([]models.Order, error) {
-	orders, err := s.storage.GetOrders(ctx, userID)
+func (s *service) GetUserOrders(ctx context.Context, userID string) ([]models.Order, error) {
+	orders, err := s.storage.GetUserOrders(ctx, userID)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

@@ -40,6 +40,7 @@ func (s *service) handleSuccessAccrualResponse(accrual *AccrualSystemResponse, o
 
 	defer tx.Rollback()
 
+	// если processing то надо мы тоже положить в базу???
 	if accrual.Status == Invalid {
 		_, err := s.storage.UpdateOrderTx(
 			ctx,
@@ -61,12 +62,6 @@ func (s *service) handleSuccessAccrualResponse(accrual *AccrualSystemResponse, o
 	}
 
 	if accrual.Status == Processed {
-		/*
-			что будет если после UpdateOrderTx сервис перезапустят для обновления и UpdateBalance вы выпонится?
-			что будет если UpdateOrderTx вернет ошибку, баланс все равно нужно обновить?
-
-			сделал транзакцию на обновление данных
-		*/
 		_, err := s.storage.UpdateOrderTx(
 			context.Background(),
 			tx,
@@ -134,4 +129,21 @@ func (s *service) GetAccrual(order models.Order, userLogin string) {
 
 		break
 	}
+}
+
+func (s *service) UpdateOrdersAccrual(ctx context.Context) error {
+	orders, err := s.storage.GetNotAccrualOrders(ctx)
+
+	if err != nil {
+		logger.Log.Error("Error while get not accrual orders: ", err)
+		return err
+	}
+
+	for _, order := range orders {
+		go func() {
+			s.GetAccrual(order, order.UserID)
+		}()
+	}
+
+	return nil
 }

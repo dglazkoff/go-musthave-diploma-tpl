@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/api"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/auth"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/config"
@@ -16,6 +17,12 @@ func Router(store storage.Gophermart, cfg *config.Config) http.Handler {
 
 	s := service.New(store, cfg)
 	newAPI := api.New(s)
+
+	err := s.UpdateOrdersAccrual(context.Background())
+
+	if err != nil {
+		logger.Log.Error("Error while update orders accrual: ", err)
+	}
 
 	r.Route("/api/user", func(r chi.Router) {
 		r.Post("/register", logger.Log.Request(newAPI.Register))

@@ -90,7 +90,7 @@ func (a *api) GetOrders(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	orders, err := a.s.GetOrders(request.Context(), userID)
+	orders, err := a.s.GetUserOrders(request.Context(), userID)
 
 	if err != nil {
 		if errors.Is(err, service.ErrorNoOrders) {

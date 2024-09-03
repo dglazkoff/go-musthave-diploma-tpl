@@ -29,7 +29,7 @@ func (s *dbStorage) CreateOrder(ctx context.Context, order models.Order) (models
 	return order, nil
 }
 
-func (s *dbStorage) GetOrders(ctx context.Context, userID string) ([]models.Order, error) {
+func (s *dbStorage) GetUserOrders(ctx context.Context, userID string) ([]models.Order, error) {
 	rows, err := s.db.QueryContext(ctx, "SELECT id, user_id, status, uploaded_at, accrual from orders WHERE user_id = $1", userID)
 	var orders []models.Order
 
@@ -44,6 +44,34 @@ func (s *dbStorage) GetOrders(ctx context.Context, userID string) ([]models.Orde
 
 		if err != nil {
 			logger.Log.Debug("error while scan order ", err)
+			continue
+		}
+
+		orders = append(orders, order)
+	}
+
+	if rows.Err() != nil {
+		logger.Log.Debug("error from rows ", err)
+	}
+
+	return orders, nil
+}
+
+func (s *dbStorage) GetNotAccrualOrders(ctx context.Context) ([]models.Order, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT id, user_id, status, uploaded_at, accrual from orders WHERE status = $1 OR status = $2", models.New, models.Processing)
+	var orders []models.Order
+
+	if err != nil {
+		logger.Log.Debug("error while reading not accrual orders ", err)
+		return nil, err
+	}
+
+	for rows.Next() {
+		var order models.Order
+		err = rows.Scan(&order.ID, &order.UserID, &order.Status, &order.UploadedAt, &order.Accrual)
+
+		if err != nil {
+			logger.Log.Debug("error while scan not accrual order ", err)
 			continue
 		}
 
