@@ -7,15 +7,12 @@ import (
 	"fmt"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/logger"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/models"
-	"github.com/go-resty/resty/v2"
 	"time"
 )
 
 var ErrorOrderAlreadyAdded = fmt.Errorf("order already added")
 var ErrorOrderAlreadyAddedByAnotherUser = fmt.Errorf("order already added by another user")
 var ErrorNoOrders = fmt.Errorf("no orders")
-
-var client = resty.New()
 
 func (s *service) AddOrder(ctx context.Context, orderNumber string, userLogin string) error {
 	// нужно ли транзакцию на случай если ордер добавят пока мы делаем проверки ??
@@ -42,13 +39,7 @@ func (s *service) AddOrder(ctx context.Context, orderNumber string, userLogin st
 	}
 
 	go func() {
-		/*
-			а что если в процессе этого цикла сервис нужно будет перезапустить для хотфикса? как заказы получат свои бонусы?
-
-			я вижу только вариант написать горутину, которая сразу стартует и опрашивает раз в какое-то время базу данных в поисках новых ордеров.
-			проблема: занимаем базу данных для взятия и фильтрации данных + какой интервал выбрать оптимально?
-		*/
-		s.GetAccrual(order, userLogin)
+		s.accrualService.GetAccrual(order, userLogin)
 	}()
 
 	return nil

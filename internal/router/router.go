@@ -7,6 +7,7 @@ import (
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/config"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/logger"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/service"
+	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/service/accrual"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"net/http"
@@ -15,10 +16,16 @@ import (
 func Router(store storage.Gophermart, cfg *config.Config) http.Handler {
 	r := chi.NewRouter()
 
+	// мне в сервисе нужен accrualService
+	// а в accrualService нужен service
+	// что делать?
 	s := service.New(store, cfg)
+	accrualService := accrual.New(store, s, cfg)
+
+	s.SetAccrualService(accrualService)
 	newAPI := api.New(s)
 
-	err := s.UpdateOrdersAccrual(context.Background())
+	err := accrualService.UpdateOrdersAccrual(context.Background())
 
 	if err != nil {
 		logger.Log.Error("Error while update orders accrual: ", err)

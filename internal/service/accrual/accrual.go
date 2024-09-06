@@ -1,10 +1,13 @@
-package service
+package accrual
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/config"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/logger"
 	"github.com/dglazkoff/go-musthave-diploma-tpl/internal/models"
+	"github.com/go-resty/resty/v2"
 	"net/http"
 	"strconv"
 	"time"
@@ -25,6 +28,22 @@ type AccrualSystemResponse struct {
 	Accrual float64            `json:"accrual"`
 }
 
+type service struct {
+	cfg             config.Config
+	storage         storage
+	externalService externalService
+}
+
+func New(storage storage, externalService externalService, cfg *config.Config) *service {
+	return &service{
+		cfg:             *cfg,
+		storage:         storage,
+		externalService: externalService,
+	}
+}
+
+var client = resty.New()
+
 func (s *service) handleSuccessAccrualResponse(accrual *AccrualSystemResponse, order models.Order, userLogin string) error {
 	ctx := context.Background()
 	logger.Log.Debug("Handle accrual response: ", accrual.Accrual)
@@ -40,7 +59,26 @@ func (s *service) handleSuccessAccrualResponse(accrual *AccrualSystemResponse, o
 
 	defer tx.Rollback()
 
-	// если processing то надо мы тоже положить в базу???
+	if accrual.Status == Processing {
+		_, err := s.storage.UpdateOrderTx(
+			ctx,
+			tx,
+			models.Order{ID: order.ID, UserID: order.UserID, UploadedAt: order.UploadedAt, Status: models.Processing, Accrual: 0},
+		)
+
+		if err != nil {
+			logger.Log.Error("Error while update order: ", err)
+			return err
+		}
+
+		if err = tx.Commit(); err != nil {
+			logger.Log.Error("Error while commit transaction: ", err)
+			return err
+		}
+
+		return fmt.Errorf("order in accrual processing state")
+	}
+
 	if accrual.Status == Invalid {
 		_, err := s.storage.UpdateOrderTx(
 			ctx,
@@ -53,7 +91,7 @@ func (s *service) handleSuccessAccrualResponse(accrual *AccrualSystemResponse, o
 			return err
 		}
 
-		err = s.UpdateBalanceTx(context.Background(), tx, accrual.Accrual, userLogin)
+		err = s.externalService.UpdateBalanceTx(context.Background(), tx, accrual.Accrual, userLogin)
 
 		if err != nil {
 			logger.Log.Error("Error while update balance: ", err)
@@ -73,7 +111,7 @@ func (s *service) handleSuccessAccrualResponse(accrual *AccrualSystemResponse, o
 			return err
 		}
 
-		err = s.UpdateBalanceTx(context.Background(), tx, accrual.Accrual, userLogin)
+		err = s.externalService.UpdateBalanceTx(context.Background(), tx, accrual.Accrual, userLogin)
 
 		if err != nil {
 			logger.Log.Error("Error while update balance: ", err)
